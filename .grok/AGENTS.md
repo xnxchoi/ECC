@@ -76,7 +76,7 @@ for always-on home rules.
 |---------|-------------|-----------|------------|
 | Home instructions | `~/.claude` CLAUDE.md | `~/.codex/AGENTS.md` | `~/.grok/AGENTS.md` and `~/.grok/rules/` |
 | Skills | `~/.claude/skills/` | `.agents/skills/` | `~/.grok/skills/` plus `.agents/skills/` |
-| Commands | `~/.claude/commands/` | `~/.codex/prompts/` | `~/.grok/commands/` |
+| Commands | `~/.claude/commands/` | guidelines | `~/.grok/commands/` |
 | Agents | Markdown subagents | `.toml` role layers | Markdown agents in `~/.grok/agents/` |
 | MCP | `.mcp.json` | stdio-only `config.toml` | stdio and HTTP/SSE in `config.toml` |
 | Hooks | settings.json matchers | narrower native subset | `~/.grok/hooks/*.json` plus config.toml |

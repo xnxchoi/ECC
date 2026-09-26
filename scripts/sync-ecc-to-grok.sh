@@ -51,7 +51,7 @@ AGENTS_SKILLS_SRC="$REPO_ROOT/.agents/skills"
 AGENTS_SKILLS_DEST="$AGENTS_HOME/skills"
 HOOKS_INSTALLER="$REPO_ROOT/scripts/codex/install-global-git-hooks.sh"
 SANITY_CHECKER="$REPO_ROOT/scripts/grok/check-grok-global-state.sh"
-LEGACY_STATE_HELPER="$REPO_ROOT/scripts/codex/legacy-sync-state.js"
+LEGACY_STATE_HELPER="$REPO_ROOT/scripts/grok/legacy-sync-state.js"
 SKILLS_INSTALLER="$REPO_ROOT/scripts/grok/install-agents-skills.js"
 COMMAND_GENERATOR="$REPO_ROOT/scripts/grok/generate-command-file.js"
 COMMANDS_INSTALLER="$REPO_ROOT/scripts/grok/install-grok-commands.js"
@@ -81,7 +81,7 @@ require_path() {
   fi
 }
 
-MCP_MERGE_SCRIPT="$REPO_ROOT/scripts/codex/merge-mcp-config.js"
+MCP_MERGE_SCRIPT="$REPO_ROOT/scripts/grok/merge-mcp-config.js"
 
 require_path "$REPO_ROOT/AGENTS.md" "ECC AGENTS.md"
 require_path "$AGENTS_GROK_SUPP_SRC" "ECC Grok AGENTS supplement"

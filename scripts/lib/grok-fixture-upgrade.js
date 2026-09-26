@@ -25,7 +25,9 @@ const EXCLUSIVE_FIXTURE_PATHS = [
 ];
 
 const SHARED_FIXTURE_MARKERS = [
+  { file: 'scripts/grok/merge-mcp-config.js', pattern: /--harness grok/ },
   { file: 'scripts/codex/merge-mcp-config.js', pattern: /--harness grok/ },
+  { file: 'scripts/grok/legacy-sync-state.js', pattern: /--grok-home/ },
   { file: 'scripts/codex/legacy-sync-state.js', pattern: /--grok-home/ },
   { file: 'scripts/codex/install-global-git-hooks.sh', pattern: /dirname "\$DEST_DIR"\)\/backups/ },
   { file: 'scripts/lib/codex-legacy-sync.js', pattern: /extraTrustedRoots/ },

@@ -88,6 +88,7 @@ temp/
 *.tmp
 *.bak
 *.backup
+*.patch
 
 # Observer temp files (continuous-learning-v2)
 .observer-tmp/
