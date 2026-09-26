@@ -151,6 +151,7 @@
     "scripts/session-inspect.js",
     "scripts/sessions-cli.js",
     "scripts/setup-package-manager.js",
+    "scripts/setup-device.js",
     "scripts/skill-create-output.js",
     "scripts/status.js",
     "scripts/sync-ecc-to-codex.sh",
@@ -504,7 +505,9 @@
     "build:opencode": "node scripts/build-opencode.js",
     "prepack": "npm run build:opencode",
     "dashboard": "python3 ./ecc_dashboard.py",
-    "dashboard:web": "node scripts/dashboard-web.js"
+    "dashboard:web": "node scripts/dashboard-web.js",
+    "setup:device": "node scripts/setup-device.js",
+    "sync:upstream": "git fetch upstream && git merge upstream/main"
   },
   "dependencies": {
     "@iarna/toml": "2.2.5",
