@@ -187,17 +187,26 @@ function setupAntigravityConfig(repoRoot, homeDir, dryRun = false) {
       fs.writeFileSync(pluginJsonPath, JSON.stringify({ name: 'ecc' }, null, 2) + '\n');
     }
 
-    // Link or copy rules and skills if not already present
-    for (const sub of ['rules', 'skills']) {
-      const targetSub = path.join(pluginDir, sub);
-      const sourceSub = path.join(repoRoot, sub);
-      if (!fs.existsSync(targetSub)) {
-        try {
-          fs.symlinkSync(sourceSub, targetSub, 'junction');
-          console.log(`✓ Linked plugin ${sub} -> ${sourceSub}`);
-        } catch {
-          console.log(`✓ Preserved plugin ${sub} at ${targetSub}`);
-        }
+    // Link rules for global behavior
+    const rulesTarget = path.join(pluginDir, 'rules');
+    const rulesSource = path.join(repoRoot, 'rules');
+    if (!fs.existsSync(rulesTarget) && fs.existsSync(rulesSource)) {
+      try {
+        fs.symlinkSync(rulesSource, rulesTarget, 'junction');
+        console.log(`✓ Linked plugin rules -> ${rulesSource}`);
+      } catch {
+        console.log(`✓ Preserved plugin rules at ${rulesTarget}`);
+      }
+    }
+
+    // Clean up any old bulk skills folder in plugins/ecc so skills.json include_only governs skills
+    const skillsTarget = path.join(pluginDir, 'skills');
+    if (fs.existsSync(skillsTarget)) {
+      try {
+        fs.rmSync(skillsTarget, { recursive: true, force: true });
+        console.log(`✓ Removed bulk skills from plugin (skills.json include_only now controls skill budget)`);
+      } catch {
+        // Ignored if unable to remove
       }
     }
   }
