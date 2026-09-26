@@ -91,6 +91,18 @@ Options:
 
 function atomicWriteJson(filePath, data, dryRun = false) {
   const content = `${JSON.stringify(data, null, 2)}\n`;
+  if (fs.existsSync(filePath)) {
+    try {
+      const existing = fs.readFileSync(filePath, 'utf8');
+      if (existing === content) {
+        console.log(`✓ Already up-to-date: ${filePath}`);
+        return;
+      }
+    } catch {
+      // Proceed to write if read fails
+    }
+  }
+
   if (dryRun) {
     console.log(`[dry-run] Would write ${filePath}`);
     return;
