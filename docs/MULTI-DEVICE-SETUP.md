@@ -22,9 +22,9 @@ xnxchoi/ECC:custom (default working branch: Grok Build, device scripts, personal
 * **`origin`**: `https://github.com/xnxchoi/ECC.git` (Personal GitHub fork)
 * **`main`**: Pure mirror of upstream. Never commit custom work here.
 * **`custom`**: Active customization branch containing:
-  - Full Grok Build integration (`.grok/`, `scripts/grok/`, navigation guide, and test suite).
-  - Dynamic device setup automation (`scripts/setup-device.js`).
-  - Helper commands (`npm run setup:device`, `npm run sync:upstream`).
+  * Full Grok Build integration (`.grok/`, `scripts/grok/`, navigation guide, and test suite).
+  * Dynamic device setup automation (`scripts/setup-device.js`).
+  * Helper commands (`npm run setup:device`, `npm run sync:upstream`).
 
 ---
 
@@ -51,13 +51,13 @@ npm run setup:device
 ### What `npm run setup:device` Does Automatically:
 1. **Dynamic Path Configuration**: Detects `$HOME` and current repo path on that specific machine—never hardcoding user paths.
 2. **Antigravity Setup**:
-   - Updates `~/.gemini/config/skills.json` to point directly to `<repo>/skills` with the recommended skill set.
-   - Configures `~/.gemini/config/mcp_config.json` with the local `ecc-memory` MCP server.
-   - Links rules and skills into `~/.gemini/config/plugins/ecc`.
+   * Updates `~/.gemini/config/skills.json` to point directly to `<repo>/skills` with the recommended skill set.
+   * Configures `~/.gemini/config/mcp_config.json` with the local `ecc-memory` MCP server.
+   * Links rules and skills into `~/.gemini/config/plugins/ecc`.
 3. **Codex CLI Setup**:
-   - Ensures `~/.codex/config.toml` exists with recommended MCP servers (`github`, `context7`, `exa`, `memory`, `playwright`, `sequential-thinking`).
+   * Ensures `~/.codex/config.toml` exists with recommended MCP servers (`github`, `context7`, `exa`, `memory`, `playwright`, `sequential-thinking`).
 4. **Git Remote Check**:
-   - Ensures `origin` points to `xnxchoi/ECC` and `upstream` points to `affaan-m/ECC`.
+   * Ensures `origin` points to `xnxchoi/ECC` and `upstream` points to `affaan-m/ECC`.
 
 ---
 
