@@ -250,27 +250,6 @@ function snapshotLegacyPath(filePath) {
   };
 }
 
-function assertInstalledStateUnmodified(state) {
-  for (const entry of state.paths) {
-    const filePath = path.resolve(entry.path);
-    const trustedRoot = getTrustedRoot(state, filePath);
-    if (!trustedRoot || hasUnsafeManagedAncestor(filePath, trustedRoot)) {
-      throw new Error(`Refusing to reuse unsafe legacy Codex ownership path: ${filePath}`);
-    }
-    const snapshot = readRegularFileNoFollow(filePath);
-    if (!entry.installedSha256) {
-      if (snapshot) throw new Error(`Refusing to replace modified legacy Codex artifact: ${filePath}`);
-      continue;
-    }
-    const digest = snapshot
-      ? crypto.createHash('sha256').update(snapshot.content).digest('hex')
-      : null;
-    if (digest !== entry.installedSha256) {
-      throw new Error(`Refusing to replace modified legacy Codex artifact: ${filePath}`);
-    }
-  }
-}
-
 function beginLegacySyncState(options) {
   const codexHome = path.resolve(options.codexHome);
   const statePath = getStatePath(codexHome);
@@ -284,7 +263,6 @@ function beginLegacySyncState(options) {
   if (priorState && priorState.status !== 'installed') {
     throw new Error(`Legacy Codex sync state requires recovery before reinstall: ${statePath}`);
   }
-  // if (priorState) assertInstalledStateUnmodified(priorState);
   const trustedRoots = [...new Set([
     codexHome,
     ...(Array.isArray(priorState?.trustedRoots) ? priorState.trustedRoots : []), ...(priorState?.installedHooksPath ? [priorState.installedHooksPath] : []),

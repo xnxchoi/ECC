@@ -10,8 +10,7 @@ const {
   DEFAULT_CURATED_SKILLS,
   parseArgs,
   setupAntigravityConfig,
-  setupCodexConfig,
-  verifyGitRemotes
+  setupCodexConfig
 } = require('../../scripts/setup-device');
 
 function createTempDir(prefix) {

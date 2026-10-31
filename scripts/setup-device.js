@@ -246,7 +246,7 @@ function setupCodexConfig(repoRoot, homeDir, dryRun = false) {
   }
 }
 
-function verifyGitRemotes(repoRoot, dryRun = false) {
+function verifyGitRemotes(repoRoot, _dryRun = false) {
   console.log(`\n--- Checking Git Remotes ---`);
   try {
     const gitEnv = { ...process.env };
