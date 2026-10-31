@@ -105,6 +105,7 @@ function buildExpectedPublishPaths(repoRoot) {
     "scripts/harness-adapter-compliance.js",
     "scripts/session-inspect.js",
     "scripts/setup.js",
+    "scripts/setup-device.js",
     "scripts/github-coordination.js",
     "scripts/uninstall.js",
     "scripts/welcome.js",

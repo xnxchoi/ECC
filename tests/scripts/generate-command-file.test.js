@@ -109,7 +109,7 @@ function runTests() {
       const written = fs.readFileSync(outPath, 'utf8');
       assert.match(
         written,
-        /description: "Restate requirements, assess risks, and create step-by-step implementation plan\. WAIT for user CONFIRM before touching any code\."/
+        /description: "Restate requirements, assess risks, and create step-by-step implementation plan\. WAIT for user CONFIRM before touching any code\. Use for a single-model inline or PRD-driven implementation plan; for a dual-model \(Codex\/Antigravity\) plan use \/multi-plan, and for visual annotate-and-approve review of the resulting plan use \/plan-canvas\."/
       );
     } finally {
       fs.rmSync(tempDir, { recursive: true, force: true });

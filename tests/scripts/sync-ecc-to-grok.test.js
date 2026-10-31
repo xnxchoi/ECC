@@ -343,7 +343,7 @@ function runTests() {
       assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
 
       const agents = fs.readFileSync(path.join(grokDir, 'AGENTS.md'), 'utf8');
-      assert.match(agents, /^# Everything Claude Code \(ECC\) — Agent Instructions/m);
+      assert.match(agents, /^# ECC — Agent Instructions/m);
       assert.match(agents, /^# Grok Supplement \(From ECC \.grok\/AGENTS\.md\)/m);
 
       const parsed = TOML.parse(fs.readFileSync(configPath, 'utf8'));
