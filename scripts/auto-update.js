@@ -16,6 +16,9 @@ Usage: node scripts/auto-update.js [--target <${SUPPORTED_INSTALL_TARGETS.join('
 
 Pull the latest ECC repo changes and reinstall the current context's managed targets
 using the original install-state request.
+
+A Grok copied-config install under ~/.grok is updated on its own. The script pulls
+this checkout, or --repo-root, then reruns scripts/sync-ecc-to-grok.sh.
 `);
   process.exit(exitCode);
 }
@@ -190,6 +193,78 @@ function legacyMigrationWarning(record) {
   return 'Found only a legacy Antigravity .agent install-state. Run the Antigravity installer once to migrate it to .agents before auto-updating.';
 }
 
+function grokDestinationActive(grokHome, dependencies) {
+  const detectDest = dependencies.detectDestFixture || grokFixtureUpgrade.detectDestFixture;
+  const readPolicy = dependencies.readFixturePolicy || grokFixtureUpgrade.readFixturePolicy;
+  const destPresent = Boolean(detectDest(grokHome));
+  const policy = readPolicy(grokHome);
+  return {
+    destPresent,
+    policy,
+    active: Boolean(destPresent || (policy && policy.status === 'active')),
+  };
+}
+
+function resolveCheckoutRepoRoot(dependencies) {
+  const resolve = dependencies.resolveScriptRepoRoot
+    || (() => path.resolve(__dirname, '..'));
+  try {
+    return { repoRoot: validateRepoRoot(resolve()) };
+  } catch (error) {
+    return { error };
+  }
+}
+
+function summarizeUpdateResults(results) {
+  return {
+    checkedCount: results.length,
+    updatedCount: results.filter(result => result.status === 'updated' || result.status === 'planned').length,
+    errorCount: results.filter(result => result.status === 'error').length,
+  };
+}
+
+function grokCopiedConfigResult({ grokHome, repoRoot, dryRun, grokFixture }) {
+  const base = {
+    adapter: { id: 'grok-copied-config', target: 'grok', kind: 'home' },
+    installStatePath: grokHome,
+    repoRoot,
+    installArgs: ['bash', path.join(repoRoot, 'scripts', 'sync-ecc-to-grok.sh')],
+  };
+
+  if (dryRun) {
+    return { ...base, status: 'planned' };
+  }
+
+  if (grokFixture && grokFixture.destSync === 'applied') {
+    return { ...base, status: 'updated' };
+  }
+
+  if (grokFixture && grokFixture.destSync === 'error') {
+    return {
+      ...base,
+      status: 'error',
+      error: grokFixture.destSyncError || 'Grok copied-config sync failed',
+    };
+  }
+
+  if (grokFixture && grokFixture.flow === 'none') {
+    return {
+      ...base,
+      installArgs: [],
+      status: 'skipped',
+      detail: grokFixture.reason === 'detached'
+        ? 'Grok fixture policy is detached, so the copied config was left unchanged.'
+        : 'No Grok copied-config refresh was required.',
+    };
+  }
+
+  return {
+    ...base,
+    status: 'error',
+    error: `Grok copied-config was not refreshed (flow=${grokFixture && grokFixture.flow}). Expected ${path.join(grokHome, 'config.toml')} and a passthrough or perforated upgrade.`,
+  };
+}
+
 function runAutoUpdate(options = {}, dependencies = {}) {
   const discover = dependencies.discoverInstalledStates || discoverInstalledStates;
   const execute = dependencies.runExternalCommand || runExternalCommand;
@@ -208,7 +283,9 @@ function runAutoUpdate(options = {}, dependencies = {}) {
     : [];
 
   const results = [];
-  if (records.length === 0) {
+  const grokHome = options.grokHome || path.join(homeDir, '.grok');
+  const grokDestination = grokDestinationActive(grokHome, dependencies);
+  if (records.length === 0 && !grokDestination.active) {
     return {
       dryRun: Boolean(options.dryRun),
       repoRoot: requestedRepoRoot,
@@ -250,7 +327,31 @@ function runAutoUpdate(options = {}, dependencies = {}) {
     }
   }
 
-  const repoRoot = requestedRepoRoot || inferredRepoRoots[0] || null;
+  let repoRoot = requestedRepoRoot || inferredRepoRoots[0] || null;
+  if (!repoRoot && records.length === 0 && grokDestination.active) {
+    const resolved = resolveCheckoutRepoRoot(dependencies);
+    if (!resolved.repoRoot) {
+      results.push({
+        adapter: { id: 'grok-copied-config', target: 'grok', kind: 'home' },
+        installStatePath: grokHome,
+        repoRoot: null,
+        installArgs: [],
+        status: 'error',
+        error: resolved.error
+          ? resolved.error.message
+          : 'Found a Grok copied-config install but no ECC repo root. Pass --repo-root.',
+      });
+      return {
+        dryRun: Boolean(options.dryRun),
+        repoRoot: null,
+        results,
+        warnings,
+        grokFixture: { flow: 'none' },
+        summary: summarizeUpdateResults(results),
+      };
+    }
+    repoRoot = resolved.repoRoot;
+  }
   if (!repoRoot) {
     return {
       dryRun: Boolean(options.dryRun),
@@ -270,7 +371,6 @@ function runAutoUpdate(options = {}, dependencies = {}) {
     HOME: homeDir,
     USERPROFILE: homeDir
   };
-  const grokHome = options.grokHome || path.join(homeDir, '.grok');
   const classify = dependencies.classifyGrokFixtureUpgrade || grokFixtureUpgrade.classifyGrokFixtureUpgrade;
   const probeIncoming = dependencies.probeGrokSupportFromGit || grokFixtureUpgrade.probeGrokSupportFromGit;
   const snapshotFiles = dependencies.snapshotFixtureFiles || grokFixtureUpgrade.snapshotFixtureFiles;
@@ -374,17 +474,22 @@ function runAutoUpdate(options = {}, dependencies = {}) {
     }
   }
 
+  if (records.length === 0 && grokDestination.active) {
+    results.push(grokCopiedConfigResult({
+      grokHome,
+      repoRoot,
+      dryRun: Boolean(options.dryRun),
+      grokFixture,
+    }));
+  }
+
   return {
     dryRun: Boolean(options.dryRun),
     repoRoot,
     grokFixture,
     results,
     warnings,
-    summary: {
-      checkedCount: results.length,
-      updatedCount: results.filter(result => result.status === 'updated' || result.status === 'planned').length,
-      errorCount: results.filter(result => result.status === 'error').length
-    }
+    summary: summarizeUpdateResults(results),
   };
 }
 
@@ -415,6 +520,9 @@ function printHuman(result) {
     console.log(`- ${entry.adapter.id}`);
     console.log(`  Status: ${entry.status.toUpperCase()}`);
     console.log(`  Install-state: ${entry.installStatePath}`);
+    if (entry.detail) {
+      console.log(`  Detail: ${entry.detail}`);
+    }
     if (entry.error) {
       console.log(`  Error: ${entry.error}`);
       continue;

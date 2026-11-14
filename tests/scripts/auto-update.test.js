@@ -83,6 +83,25 @@ function ensureFakeRepo(repoRoot) {
   fs.writeFileSync(path.join(repoRoot, 'scripts', 'install-apply.js'), '#!/usr/bin/env node\n');
 }
 
+function writeGrokCopiedConfig(grokHome) {
+  fs.mkdirSync(grokHome, { recursive: true });
+  fs.writeFileSync(
+    path.join(grokHome, 'AGENTS.md'),
+    '# User\n\n# Grok Supplement (From ECC .grok/AGENTS.md)\n'
+  );
+  fs.writeFileSync(path.join(grokHome, 'config.toml'), 'model = "grok"\n');
+}
+
+function grokOnlyExecutor(commands) {
+  return (command, args, options) => {
+    commands.push({ command, args, options });
+    if (command === 'git' && (args[0] === 'show' || args[0] === 'cat-file')) {
+      throw new Error('missing on incoming');
+    }
+    return { stdout: '', stderr: '' };
+  };
+}
+
 function runTests() {
   console.log('\n=== Testing auto-update.js ===\n');
 
@@ -739,6 +758,179 @@ function runTests() {
       cleanup(homeDir);
       cleanup(projectRoot);
       cleanup(repoRoot);
+    }
+  })) passed += 1; else failed += 1;
+
+  if (test('runAutoUpdate does not pull when no install-state and no Grok copy exist', () => {
+    const homeDir = createTempDir('auto-update-empty-home-');
+    const projectRoot = createTempDir('auto-update-empty-project-');
+    const repoRoot = createTempDir('auto-update-empty-repo-');
+    try {
+      ensureFakeRepo(repoRoot);
+      const commands = [];
+      const result = runAutoUpdate(
+        { homeDir, projectRoot, repoRoot, dryRun: false },
+        {
+          discoverInstalledStates: () => [],
+          runExternalCommand: grokOnlyExecutor(commands),
+        }
+      );
+      assert.strictEqual(result.summary.checkedCount, 0);
+      assert.strictEqual(result.summary.updatedCount, 0);
+      assert.strictEqual(commands.length, 0);
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+      cleanup(repoRoot);
+    }
+  })) passed += 1; else failed += 1;
+
+  if (test('runAutoUpdate refreshes a Grok-only copied config without another install-state', () => {
+    const homeDir = createTempDir('auto-update-grok-only-home-');
+    const projectRoot = createTempDir('auto-update-grok-only-project-');
+    const repoRoot = createTempDir('auto-update-grok-only-repo-');
+    const grokHome = path.join(homeDir, '.grok');
+    try {
+      ensureFakeRepo(repoRoot);
+      writeGrokCopiedConfig(grokHome);
+      const commands = [];
+      const result = runAutoUpdate(
+        { homeDir, projectRoot, grokHome, repoRoot, dryRun: false },
+        {
+          discoverInstalledStates: () => [],
+          runExternalCommand: grokOnlyExecutor(commands),
+        }
+      );
+
+      assert.strictEqual(result.summary.checkedCount, 1);
+      assert.strictEqual(result.summary.updatedCount, 1);
+      assert.strictEqual(result.summary.errorCount, 0);
+      assert.strictEqual(result.results[0].adapter.id, 'grok-copied-config');
+      assert.strictEqual(result.results[0].status, 'updated');
+      assert.strictEqual(result.grokFixture.flow, 'passthrough');
+      assert.strictEqual(result.grokFixture.destSync, 'applied');
+      assert.strictEqual(commands[0].args[0], 'fetch');
+      assert.strictEqual(commands[0].options.cwd, repoRoot);
+      assert.ok(commands.some(entry => entry.command === 'git' && entry.args[0] === 'pull'));
+      const sync = commands[commands.length - 1];
+      assert.strictEqual(sync.args[0], path.join(repoRoot, 'scripts', 'sync-ecc-to-grok.sh'));
+      assert.strictEqual(sync.options.env.GROK_HOME, grokHome);
+      assert.ok(!commands.some(entry => entry.command === process.execPath));
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+      cleanup(repoRoot);
+    }
+  })) passed += 1; else failed += 1;
+
+  if (test('runAutoUpdate plans a Grok-only update on dry-run without git', () => {
+    const homeDir = createTempDir('auto-update-grok-dry-home-');
+    const projectRoot = createTempDir('auto-update-grok-dry-project-');
+    const repoRoot = createTempDir('auto-update-grok-dry-repo-');
+    const grokHome = path.join(homeDir, '.grok');
+    try {
+      ensureFakeRepo(repoRoot);
+      writeGrokCopiedConfig(grokHome);
+      const commands = [];
+      const result = runAutoUpdate(
+        { homeDir, projectRoot, grokHome, repoRoot, dryRun: true },
+        {
+          discoverInstalledStates: () => [],
+          runExternalCommand: grokOnlyExecutor(commands),
+        }
+      );
+      assert.strictEqual(commands.length, 0);
+      assert.strictEqual(result.summary.updatedCount, 1);
+      assert.strictEqual(result.results[0].status, 'planned');
+      assert.strictEqual(result.results[0].adapter.id, 'grok-copied-config');
+      assert.strictEqual(result.repoRoot, repoRoot);
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+      cleanup(repoRoot);
+    }
+  })) passed += 1; else failed += 1;
+
+  if (test('runAutoUpdate uses the script checkout when a Grok copy has no --repo-root', () => {
+    const homeDir = createTempDir('auto-update-grok-checkout-home-');
+    const projectRoot = createTempDir('auto-update-grok-checkout-project-');
+    const repoRoot = createTempDir('auto-update-grok-checkout-repo-');
+    const grokHome = path.join(homeDir, '.grok');
+    try {
+      ensureFakeRepo(repoRoot);
+      writeGrokCopiedConfig(grokHome);
+      const commands = [];
+      const result = runAutoUpdate(
+        { homeDir, projectRoot, grokHome, dryRun: false },
+        {
+          discoverInstalledStates: () => [],
+          resolveScriptRepoRoot: () => repoRoot,
+          runExternalCommand: grokOnlyExecutor(commands),
+        }
+      );
+      assert.strictEqual(result.repoRoot, path.resolve(repoRoot));
+      assert.strictEqual(result.summary.updatedCount, 1);
+      assert.strictEqual(commands[0].options.cwd, path.resolve(repoRoot));
+      assert.strictEqual(commands[commands.length - 1].command, 'bash');
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+      cleanup(repoRoot);
+    }
+  })) passed += 1; else failed += 1;
+
+  if (test('runAutoUpdate reports a missing checkout for a Grok-only install', () => {
+    const homeDir = createTempDir('auto-update-grok-missing-home-');
+    const projectRoot = createTempDir('auto-update-grok-missing-project-');
+    const grokHome = path.join(homeDir, '.grok');
+    try {
+      writeGrokCopiedConfig(grokHome);
+      const commands = [];
+      const result = runAutoUpdate(
+        { homeDir, projectRoot, grokHome, dryRun: false },
+        {
+          discoverInstalledStates: () => [],
+          resolveScriptRepoRoot: () => path.join(homeDir, 'not-a-repo'),
+          runExternalCommand: grokOnlyExecutor(commands),
+        }
+      );
+      assert.strictEqual(commands.length, 0);
+      assert.strictEqual(result.summary.updatedCount, 0);
+      assert.strictEqual(result.summary.errorCount, 1);
+      assert.strictEqual(result.results[0].adapter.id, 'grok-copied-config');
+      assert.match(result.results[0].error, /Invalid ECC repo root/);
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+    }
+  })) passed += 1; else failed += 1;
+
+  if (test('CLI dry-run plans a Grok-only copied-config update from this checkout', () => {
+    const fixture = createTempDir('auto-update-grok-cli-');
+    const homeDir = path.join(fixture, 'home');
+    const projectRoot = path.join(fixture, 'project');
+    const repoRoot = path.resolve(__dirname, '..', '..');
+    try {
+      fs.mkdirSync(projectRoot, { recursive: true });
+      writeGrokCopiedConfig(path.join(homeDir, '.grok'));
+      const stdout = execFileSync(process.execPath, [
+        path.join(repoRoot, 'scripts', 'auto-update.js'),
+        '--dry-run',
+        '--json',
+      ], {
+        cwd: projectRoot,
+        env: { ...process.env, HOME: homeDir, USERPROFILE: homeDir },
+        encoding: 'utf8',
+        maxBuffer: 16 * 1024 * 1024,
+      });
+      const updated = JSON.parse(stdout);
+      assert.strictEqual(updated.summary.errorCount, 0);
+      assert.strictEqual(updated.summary.updatedCount, 1);
+      assert.strictEqual(updated.results[0].status, 'planned');
+      assert.strictEqual(updated.results[0].adapter.id, 'grok-copied-config');
+      assert.strictEqual(updated.repoRoot, repoRoot);
+    } finally {
+      cleanup(fixture);
     }
   })) passed += 1; else failed += 1;
 

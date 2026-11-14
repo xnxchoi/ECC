@@ -27,3 +27,4 @@ node "$ECC_ROOT/scripts/auto-update.js" --repo-root /path/to/ECC
 - Reinstall is intentional: it handles upstream renames and deletions that `repair.js` cannot safely reconstruct from stale operations alone.
 - Use `--dry-run` first if you want to see the reconstructed reinstall plan before mutating anything.
 - If `~/.grok` still has a copied-config fixture, auto-update classifies it before pull (`perforated` / `solved` / `passthrough`). Inspect with `node scripts/grok/check-grok-fixture.js`.
+- A Grok-only copied config is enough. Auto-update does not need a Claude, Cursor, or other install-state file. It pulls this checkout, or `--repo-root`, and reruns `scripts/sync-ecc-to-grok.sh`.
